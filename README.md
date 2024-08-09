@@ -1,8 +1,11 @@
 The goal of this project was to create a more efficient gmail search than the existing one. 
+
+
 I aimed to reach this goal by performing Retrieval Augmented Generation (RAG) to increase the accuracy of my LLM's responses. 
 
 What is RAG?
-- Providing the best context possible for a model to answer questions
+- A process of retrieving context relevent information from a database, and presenting it to an LLM to generate an accurate response
+- Solves the issue of hallucinations
 
 How Does it Work?
 - Use a text embedding model to convert the important email info into a high dimensional vector format

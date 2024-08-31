@@ -5,7 +5,6 @@ I aimed to reach this goal by performing Retrieval Augmented Generation (RAG) to
 
 What is RAG?
 - A process of retrieving context relevant information from a database, and presenting it to an LLM to generate an accurate response
-- Solves the issue of hallucinations
 
 How Does it Work?
 - Use a text embedding model to convert the important email info into a high dimensional vector format

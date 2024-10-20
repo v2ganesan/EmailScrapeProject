@@ -3,7 +3,7 @@
 
 # Ignore the credentials.json file that stores sensitive credentials
 credentials.json
-
+token.json
 # Python virtual environment
 venv/
 __pycache__/

@@ -350,7 +350,6 @@ def print_email_details(message, service, email_dir, id):
   
   # get the message body 
   body, html_body, attachments = get_message_body(message, service)
-
   html_path = save_open_html(html_body, attachments, service, message['id'], message,  email_dir)
   chunks = chunk_body(body)
   print(f"email {id} has {len(chunks)} chunks")

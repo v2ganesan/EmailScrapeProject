@@ -1,9 +1,10 @@
 # Ignore the .env file that stores environment variables
 .env
-
+.venv/
 # Ignore the credentials.json file that stores sensitive credentials
 credentials.json
 token.json
+token.pickle
 # Python virtual environment
 venv/
 __pycache__/

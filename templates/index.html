@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG System with GPT</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #query-form {
+            margin-bottom: 20px;
+        }
+        #response-container {
+            margin-top: 20px;
+        }
+        label, input, button {
+            font-size: 1.2em;
+        }
+        input {
+            padding: 10px;
+            margin-right: 10px;
+            width: 400px;
+        }
+        button {
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ask a Question</h1>
+    <form id="query-form">
+        <label for="query">Enter your question:</label>
+        <input type="text" id="query" placeholder="Ask anything..." required>
+        <button type="submit">Submit</button>
+    </form>
+
+    <div id="response-container">
+        <h2>Response:</h2>
+        <p id="gpt-response"></p>
+    </div>
+
+    <script>
+        document.getElementById('query-form').addEventListener('submit', function(event) {
+            event.preventDefault();  // Prevent form from submitting the traditional way
+
+            const query = document.getElementById('query').value;
+
+            // Send POST request to Flask app
+            fetch('/rag', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    query: query
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network bad');
+                }
+                return response.json()
+            })
+
+            .then(data => {
+                // Display the GPT response in the response-container
+                const gptResponseElement = document.getElementById('gpt-response');
+                if(data.gpt_response) {
+                    gptResponseElement.innerText = data.gpt_response;
+                } else {
+                    gptResponseElement.innertext = 'Error: ' + data.error;
+                }
+
+                document.getElementById('gpt-response').innerText = data.gpt_response;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('gpt-response').innerText = "An error occurred. Please try again.";
+            });
+        });
+    </script>
+</body>
+</html>

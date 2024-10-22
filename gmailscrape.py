@@ -1,6 +1,7 @@
 import os.path
 import base64
-import re 
+import re
+import traceback 
 
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -58,11 +59,13 @@ SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 load_dotenv()
 
 MY_COMET_KEY = os.getenv('MY_COMET_KEY')
-
+ 
+MY_DIR  = os.getenv('MY_DIR')
+'''
 #create a comet project
 comet_llm.init(project="my_email_search",
                api_key=MY_COMET_KEY)
-
+'''
 # Set OpenAI API key
 MY_OPENAI_KEY = os.getenv('MY_OPENAI_KEY')
 if not MY_OPENAI_KEY:
@@ -80,9 +83,9 @@ q_client = QdrantClient(
     timeout=60.0,
     api_key=QDRANT_API_KEY
 )
-'''
+
 # Create collection
-collection_name = "TestDatabase"  # Ensure this name is appropriate for your project
+collection_name = "Test"  
 try:
     q_client.create_collection(
         collection_name=collection_name,
@@ -93,10 +96,11 @@ try:
     print(f"Collection '{collection_name}' created successfully.")
 except Exception as e:
     print(f"An error occurred while creating the collection: {e}")
-'''
+    traceback.print_exc()
+
 
 tokenizer = tiktoken.get_encoding('cl100k_base')
-
+ 
 #create vector embeddings
 def get_embedding(text, model="text-embedding-3-small"):
     client = OpenAI(api_key=MY_OPENAI_KEY,)
@@ -122,7 +126,7 @@ def main():
       flow = InstalledAppFlow.from_client_secrets_file(
           "credentials.json", SCOPES
       )
-      creds = flow.run_local_server(port=0)
+      creds = flow.run_local_server(port=8080)
     # Save the credentials for the next run
     with open("token.json", "w") as token:
       token.write(creds.to_json())
@@ -143,7 +147,7 @@ def main():
     for idx, msg in enumerate(messages, start=1):
       msg_id = msg['id']
       message = service.users().messages().get(userId='me', id=msg_id).execute()
-      email_dir = os.path.join('/Users/varunganesan/Downloads/EmailScrapeProject/allEmails/', f'email_{idx}')
+      email_dir = os.path.join(MY_DIR, f'email_{idx}')
       os.makedirs(email_dir, exist_ok=True)
       print_email_details(message, service, email_dir, idx)
 
@@ -243,9 +247,6 @@ def save_open_html(html_body, attachments, service, message_id, message,  save_p
      
      f.write(html_template)
    #print(f"HTML email saved to {html_file_path}")
-   
-   #ss_dir = os.path.join('/Users/varunganesan/Downloads/EmailScrapeProject/htmlss/', os.path.basename(save_path) + ".png")
-   #take_screenshot_of_file(html_file_path, ss_dir)
    '''
    # Open the HTML file with the default web browser
    if os.name == 'posix':  # For macOS and Linux
@@ -262,7 +263,7 @@ def add_to_db(sender,
               html_path, 
               id, 
               qdrant_client: QdrantClient = q_client, 
-              collection_name: str = "TestDatabase"):
+              collection_name: str = "Test"):
    #create an empty list for the points 
    points = []
 
@@ -339,7 +340,6 @@ def print_email_details(message, service, email_dir, id):
   subject = None
   from_email = None
 
-
   for header in headers:
     if header['name'] == 'Subject':
       subject = header['value']
@@ -350,35 +350,18 @@ def print_email_details(message, service, email_dir, id):
   
   # get the message body 
   body, html_body, attachments = get_message_body(message, service)
-  '''
-  print(f"From: {from_email}")
-  print(f"Subject: {subject}")
-  print(f"Date:) {date_stamp}")
-  print("=" * 50) 
-  print(f"Body: {body}")
-  '''
+
   html_path = save_open_html(html_body, attachments, service, message['id'], message,  email_dir)
   chunks = chunk_body(body)
   print(f"email {id} has {len(chunks)} chunks")
   add_to_db(from_email, subject, date_stamp, chunks, html_path, id)
-
-  '''
-  if attachments:
-     attachments_dir = os.path.join(email_dir, 'attachments')
-     os.makedirs(attachments_dir, exist_ok=True)
-
-     print("Attachments:")
-     for attachment in attachments:
-       print(f"- {attachment['filename']} ({attachment['mimeType']})")
-       #save_open_attachment(service, attachment, message['id'], attachments_dir)
-    '''
   print("=" * 50)
 
 def similarity_search(query:str, 
                       search_vector:str, 
                       limit: int=3, 
                       client: QdrantClient = q_client, 
-                      collection_name: str = "TestDatabase", 
+                      collection_name: str = "Test", 
                       **kwargs):
   """
   Perform a similarity search and return the HTML path of the top result.
@@ -404,7 +387,6 @@ def similarity_search(query:str,
     limit=limit,  # Get the top result
     with_payload=True,
     **kwargs
-
   )
 
   # Check if any results were found
@@ -425,12 +407,12 @@ def create_prompt(user_query, payload):
           "Sender": payload['sender'],
           "Subject": payload['subject'],
           "Timestamp": payload['timestamp'],
-          "Body": payload['chunk0']
+          "Body": payload['chunk']
         }
    }
    html_path = payload['html_path']
 
-   return prompt, html_path
+   return prompt
 
 #chatbot 
 def chatBot(messages, model="gpt-3.5-turbo"):
@@ -442,7 +424,7 @@ def chatBot(messages, model="gpt-3.5-turbo"):
     )
     return chat_completion.choices[0].message.content #there are a bunch of responses that can be returned, we select the first one. 
 
-def collect_messages(input, html_path):
+def collect_messages(input):
     context.append({'role':'user', 'content':f"{input}"})
 
     start_time = time.time()
@@ -469,24 +451,14 @@ def collect_messages(input, html_path):
     context.append({'role': 'assistant', 'content': f"{response}"})
     if response == 'None':
        return "it didnt work"
-    print(response)
-    if html_path:
-      print(f"Top result HTML path: {html_path}")
-      # Optionally open the HTML file
-      with open(html_path, 'r', encoding='utf-8') as file:
-        # Open the HTML file with the default web browser
-        if os.name == 'posix':  # For macOS and Linux
-          os.system(f'open "{html_path}"')
-        elif os.name == 'nt':  # For Windows
-          os.startfile(html_file_path)
-    else:
-        print("HTML path not found in payload.")
+
+
     return response
 
-#if __name__ == "__main__":
-  #main()
-
-query = input("What would you like to find in your emails?")
+if __name__ == "__main__":
+  main()
+'''
+query = input("What would you like to find in your emails? ")
 
 while(input != "Quit"):
   payload = similarity_search(search_vector= "summary", query=query)
@@ -496,4 +468,4 @@ while(input != "Quit"):
   collect_messages(prompt, html_path)
 
   query = input("What would you like to find in your emails?")
-
+'''
